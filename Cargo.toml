@@ -1,0 +1,13 @@
+[package]
+name = "classicube-anti-afk-plugin"
+version = "0.1.0"
+authors = ["SpiralP <spiral.palmer@gmail.com>"]
+edition = "2018"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+classicube-helpers = { git = "https://github.com/SpiralP/rust-classicube-helpers.git" }
+classicube-sys = { git = "https://github.com/SpiralP/rust-classicube-sys.git" }
