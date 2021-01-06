@@ -5,7 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-const INTERVAL: Duration = Duration::from_secs(14 * 10);
+// 10 minutes afk delay
+const INTERVAL: Duration = Duration::from_secs(9 * 60);
 
 thread_local!(
     static TICK_HANDLER: RefCell<Option<TickEventHandler>> = Default::default();
