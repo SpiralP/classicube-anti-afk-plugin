@@ -9,5 +9,6 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
+byteorder = "1"
 classicube-helpers = { git = "https://github.com/SpiralP/rust-classicube-helpers.git" }
 classicube-sys = { git = "https://github.com/SpiralP/rust-classicube-sys.git" }

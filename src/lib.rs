@@ -20,7 +20,9 @@ extern "C" fn on_new_map() {
 }
 
 extern "C" fn on_new_map_loaded() {
-    timer::start();
+    if unsafe { Server.Name.to_string() }.starts_with("Not Awesome 2") {
+        timer::start();
+    }
 }
 
 #[no_mangle]
