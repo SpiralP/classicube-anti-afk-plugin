@@ -1,0 +1,126 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+    tags: ["*"]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux_nix:
+    uses: SpiralP/github-reusable-workflows/.github/workflows/build.yml@main
+
+  windows_x86:
+    name: Build Windows ${{ matrix.config.arch }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - arch: x86_64
+            target: x86_64-pc-windows-msvc
+          - arch: i686
+            target: i686-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        run: |
+          rustup default stable
+          rustup component add rustfmt
+          rustup target add ${{ matrix.config.target }}
+
+      - name: Build
+        if: ${{ startsWith(github.ref, 'refs/tags/') != true }}
+        run: |
+          cargo build --target ${{ matrix.config.target }}
+
+      - name: Test
+        if: ${{ startsWith(github.ref, 'refs/tags/') != true }}
+        run: |
+          cargo test --target ${{ matrix.config.target }} -- --nocapture --test-threads 1
+
+      - name: Build Release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          cargo build --target ${{ matrix.config.target }} --release
+
+      - name: Rename files
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          Move-Item `
+            -Path 'target\${{ matrix.config.target }}\release\classicube_anti_afk_plugin.dll' `
+            -Destination '.\classicube_anti_afk_windows_${{ matrix.config.arch }}.dll'
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            classicube_anti_afk_windows_${{ matrix.config.arch }}.dll
+
+  linux_x86:
+    name: Build Linux ${{ matrix.config.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - arch: i686
+            target: i686-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        run: |
+          rustup default stable
+          rustup component add rustfmt
+          rustup target add ${{ matrix.config.target }}
+
+      - name: Build
+        if: ${{ startsWith(github.ref, 'refs/tags/') != true }}
+        run: |
+          cargo build --target ${{ matrix.config.target }}
+          file 'target/${{ matrix.config.target }}/debug/libclassicube_anti_afk_plugin.so'
+
+      - name: Test
+        if: ${{ startsWith(github.ref, 'refs/tags/') != true }}
+        run: |
+          cargo test --target ${{ matrix.config.target }} -- --nocapture --test-threads 1
+
+      - name: Build Release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          cargo build --target ${{ matrix.config.target }} --release
+          file 'target/${{ matrix.config.target }}/release/libclassicube_anti_afk_plugin.so'
+
+      - name: Rename files
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          mv 'target/${{ matrix.config.target }}/release/libclassicube_anti_afk_plugin.so' \
+            './classicube_anti_afk_linux_${{ matrix.config.arch }}.so'
+          file './classicube_anti_afk_linux_${{ matrix.config.arch }}.so'
+
+      - name: Upload Release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            classicube_anti_afk_linux_${{ matrix.config.arch }}.so
