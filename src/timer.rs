@@ -90,9 +90,9 @@ fn create_packet(local_player: &Entity) -> Result<Vec<u8>, std::io::Error> {
     data.write_u16::<BigEndian>(ENTITIES_SELF_ID as _)?;
 
     // u32 if ExtEntityPositions, else u16
-    data.write_u32::<BigEndian>((local_player.next.pos.X * 32.0) as u32)?;
-    data.write_u32::<BigEndian>(((local_player.next.pos.Y * 32.0) + 51.0) as u32)?;
-    data.write_u32::<BigEndian>((local_player.next.pos.Z * 32.0) as u32)?;
+    data.write_u32::<BigEndian>((local_player.next.pos.x * 32.0) as u32)?;
+    data.write_u32::<BigEndian>(((local_player.next.pos.y * 32.0) + 51.0) as u32)?;
+    data.write_u32::<BigEndian>((local_player.next.pos.z * 32.0) as u32)?;
 
     data.write_u8(Math_Deg2Packed(local_player.Yaw))?;
 
