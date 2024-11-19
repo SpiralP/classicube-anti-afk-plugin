@@ -1,10 +1,11 @@
-use byteorder::{BigEndian, WriteBytesExt};
-use classicube_helpers::tick::TickEventHandler;
-use classicube_sys::*;
 use std::{
     cell::{Cell, RefCell},
     time::{Duration, Instant},
 };
+
+use byteorder::{BigEndian, WriteBytesExt};
+use classicube_helpers::tick::TickEventHandler;
+use classicube_sys::*;
 
 // 10 minutes afk delay
 const INTERVAL: Duration = Duration::from_secs(9 * 60);

@@ -1,7 +1,8 @@
 mod timer;
 
-use classicube_sys::*;
 use std::{os::raw::c_int, ptr};
+
+use classicube_sys::*;
 
 extern "C" fn init() {
     timer::init();
