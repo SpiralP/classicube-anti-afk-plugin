@@ -15,7 +15,7 @@ thread_local!(
 );
 
 thread_local!(
-    static ENABLED: Cell<bool> = Cell::new(false);
+    static ENABLED: Cell<bool> = const { Cell::new(false) };
 );
 thread_local!(
     static NEXT: Cell<Instant> = Cell::new(Instant::now());
