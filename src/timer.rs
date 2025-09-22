@@ -4,62 +4,79 @@ use std::{
 };
 
 use byteorder::{BigEndian, WriteBytesExt};
-use classicube_helpers::tick::TickEventHandler;
-use classicube_sys::*;
+use classicube_helpers::{events::pointer::MovedEventHandler, tick::TickEventHandler};
+use classicube_sys::{Entities, Entity, Server, ENTITIES_SELF_ID};
 
 // 10 minutes afk delay
-const INTERVAL: Duration = Duration::from_secs(9 * 60);
+const WAKE_INTERVAL: Duration = Duration::from_secs(9 * 60);
+
+// 1 hour until we stop trying to wake up
+const REAL_THRESHOLD: Duration = Duration::from_secs(60 * 60);
 
 thread_local!(
     static TICK_HANDLER: RefCell<Option<TickEventHandler>> = Default::default();
+);
+thread_local!(
+    static MOVED_EVENT_HANDLER: RefCell<Option<MovedEventHandler>> = Default::default();
 );
 
 thread_local!(
     static ENABLED: Cell<bool> = const { Cell::new(false) };
 );
 thread_local!(
-    static NEXT: Cell<Instant> = Cell::new(Instant::now());
+    static NEXT_WAKE: Cell<Instant> = Cell::new(Instant::now());
+);
+thread_local!(
+    static NEXT_DISABLE: Cell<Instant> = Cell::new(Instant::now());
 );
 
 pub fn start() {
-    NEXT.with(move |cell| {
-        let now = Instant::now();
-        cell.set(now + INTERVAL);
-    });
-    ENABLED.with(|cell| cell.set(true));
+    let now = Instant::now();
+    NEXT_WAKE.set(now + WAKE_INTERVAL);
+    NEXT_DISABLE.set(now + REAL_THRESHOLD);
+    ENABLED.set(true);
 }
 pub fn stop() {
-    ENABLED.with(|cell| cell.set(false));
+    ENABLED.set(false);
 }
 
 pub fn init() {
-    if unsafe { Server.IsSinglePlayer } != 0 {
-        return;
-    }
-
-    TICK_HANDLER.with(|cell| {
+    TICK_HANDLER.with_borrow_mut(|option| {
         let mut tick_handler = TickEventHandler::new();
 
         tick_handler.on(move |_task| {
-            if ENABLED.with(|c| c.get()) {
+            if ENABLED.get() {
                 check();
             }
         });
 
-        *cell.borrow_mut() = Some(tick_handler);
+        *option = Some(tick_handler);
+    });
+
+    MOVED_EVENT_HANDLER.with_borrow_mut(|option| {
+        let mut handler = MovedEventHandler::new();
+
+        handler.on(|_event| {
+            NEXT_DISABLE.set(Instant::now() + REAL_THRESHOLD);
+        });
+
+        *option = Some(handler);
     });
 }
 
 pub fn free() {
-    TICK_HANDLER.with(|cell| drop(cell.borrow_mut().take()));
+    MOVED_EVENT_HANDLER.with_borrow_mut(|option| {
+        drop(option.take());
+    });
+    TICK_HANDLER.with_borrow_mut(|option| {
+        drop(option.take());
+    });
 }
 
 fn check() {
     let now = Instant::now();
-    if now >= NEXT.with(|c| c.get()) {
-        NEXT.with(move |cell| {
-            cell.set(now + INTERVAL);
-        });
+    if now >= NEXT_WAKE.get() && now < NEXT_DISABLE.get() {
+        NEXT_WAKE.set(now + WAKE_INTERVAL);
 
         if let Some(send_data) = unsafe { Server.SendData } {
             let local_player = unsafe { &*Entities.List[ENTITIES_SELF_ID as usize] };

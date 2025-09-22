@@ -5,7 +5,9 @@ use std::{os::raw::c_int, ptr};
 use classicube_sys::*;
 
 extern "C" fn init() {
-    timer::init();
+    if unsafe { Server.IsSinglePlayer } == 0 {
+        timer::init();
+    }
 }
 
 extern "C" fn free() {
@@ -21,15 +23,19 @@ extern "C" fn on_new_map() {
 }
 
 extern "C" fn on_new_map_loaded() {
-    if unsafe { Server.Name.to_string() }.starts_with("Not Awesome 2") {
+    let server_name = unsafe { (&raw const Server.Name).as_ref().unwrap() };
+
+    if server_name.to_string().starts_with("Not Awesome 2") {
         timer::start();
     }
 }
 
 #[no_mangle]
+#[allow(non_upper_case_globals)]
 pub static Plugin_ApiVersion: c_int = 1;
 
 #[no_mangle]
+#[allow(non_upper_case_globals)]
 pub static mut Plugin_Component: IGameComponent = IGameComponent {
     // Called when the game is being loaded.
     Init: Some(init),
